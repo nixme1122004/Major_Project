@@ -1,0 +1,8 @@
+{
+  "name": "Skill Swap",
+  "description": "A production-ready peer-to-peer skill-sharing platform with AI-powered matchmaking, real-time messaging, and smart scheduling.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
