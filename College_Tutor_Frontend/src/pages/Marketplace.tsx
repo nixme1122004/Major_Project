@@ -1,8 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User, Booking, Milestone } from '../types';
 import { StorageService } from '../services/storage';
 import { AIService } from '../services/aiService';
+import axios from 'axios';
+import { BACKEND_URL } from '../config';
 
 interface MarketplaceProps {
   user: User;
@@ -16,7 +18,77 @@ const Marketplace: React.FC<MarketplaceProps> = ({ user, onRefresh }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   
   const categories = ['All', 'Programming', 'Arts', 'Cooking', 'Music', 'Business', 'Languages'];
-  const allUsers = useMemo(() => StorageService.getUsers(), []);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const authState = JSON.parse(localStorage.getItem('skillswap_auth') || '{}');
+        const res = await axios.get(`${BACKEND_URL}/api/student/all`, {
+          headers: { Authorization: `Bearer ${authState.token}` }
+        });
+        
+        // Map backend SQL row format to the local user format expected by UI
+        const mappedUsers = res.data.map((u: any) => {
+          let skillsOffered: any[] = [];
+          let skillsWanted: any[] = [];
+          
+          try {
+            const parsed = typeof u.skills_json === 'string' ? JSON.parse(u.skills_json) : (u.skills_json || {});
+            
+            // Standardize string entries to rich objects or accept preexisting rich objects
+            const mapSkill = (s: any, idPrefix: string) => {
+              if (typeof s === 'string') {
+                return { id: `${idPrefix}-${Math.random().toString(36).substr(2, 5)}`, name: s, category: 'All', proficiency: 'Intermediate' };
+              }
+              return s;
+            };
+
+            const rawOffered = parsed.skillsOffered || parsed.offered || [];
+            const rawWanted = parsed.skillsWanted || parsed.wanted || [];
+            
+            skillsOffered = Array.isArray(rawOffered) ? rawOffered.map(s => mapSkill(s, 'off')) : [];
+            skillsWanted = Array.isArray(rawWanted) ? rawWanted.map(s => mapSkill(s, 'want')) : [];
+          } catch(e) {
+            console.warn(`Could not parse skills for user ${u.name}`);
+          }
+
+          // If User hasn't configured skills yet, insert default representation so they appear in Marketplace!
+          if (skillsOffered.length === 0) {
+            skillsOffered.push({
+              id: `default-off-${u.student_id}`,
+              name: `Mentorship in ${u.department || 'General'}`,
+              category: 'Business',
+              proficiency: 'Expert'
+            });
+          }
+          if (skillsWanted.length === 0) {
+            skillsWanted.push({
+              id: `default-want-${u.student_id}`,
+              name: `Seeking ${u.department || 'Tech'} guidance`,
+              category: 'Programming',
+              proficiency: 'Beginner'
+            });
+          }
+
+          return {
+            id: String(u.student_id),
+            name: u.name,
+            avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`,
+            rating: u.rating || 5.0,
+            skillsOffered,
+            skillsWanted
+          };
+        });
+        
+        setAllUsers(mappedUsers);
+      } catch (err) {
+        console.error("Failed fetching SQL users, falling back to local list:", err);
+        setAllUsers(StorageService.getUsers());
+      }
+    };
+    fetchUsers();
+  }, []);
   
   const filteredSkills = useMemo(() => {
     const list: any[] = [];
@@ -51,26 +123,28 @@ const Marketplace: React.FC<MarketplaceProps> = ({ user, onRefresh }) => {
       }));
 
       const isTeacherOffering = filter === 'wanted';
+      const authState = JSON.parse(localStorage.getItem('skillswap_auth') || '{}');
 
-      const newBooking: Booking = {
-        id: Math.random().toString(36).substr(2, 9),
-        teacherId: isTeacherOffering ? user.id : item.owner.id,
-        learnerId: isTeacherOffering ? item.owner.id : user.id,
-        skillId: item.id,
-        skillName: item.name,
-        startTime: new Date(Date.now() + 86400000).toISOString(),
-        endTime: new Date(Date.now() + 90000000).toISOString(),
-        status: 'pending',
+      const bookingPayload = {
+        teacher_id: isTeacherOffering ? user.id : item.owner.id,
+        learner_id: isTeacherOffering ? item.owner.id : user.id,
+        skill_id: item.id,
+        initiator_id: user.id,
+        skill_name: item.name,
+        start_time: new Date(Date.now() + 86400000).toISOString(),
+        end_time: new Date(Date.now() + 90000000).toISOString(),
         milestones: milestones
       };
 
-      StorageService.saveBooking(newBooking);
+      await axios.post(`${BACKEND_URL}/api/bookings/create`, bookingPayload, {
+        headers: { Authorization: `Bearer ${authState.token}` }
+      });
       
       // Artificial delay for premium feel
       await new Promise(resolve => setTimeout(resolve, 600));
       
       onRefresh();
-      alert(`Success! ${isTeacherOffering ? 'Offer' : 'Request'} sent to ${item.owner.name}. They've been notified with the AI-generated curriculum.`);
+      alert(`Success! ${isTeacherOffering ? 'Offer' : 'Request'} sent to ${item.owner.name}. They will be notified immediately.`);
     } catch (error) {
       console.error("Booking failed:", error);
       alert("Something went wrong. Please try again.");

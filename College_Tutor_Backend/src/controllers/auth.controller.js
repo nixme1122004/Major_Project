@@ -83,9 +83,28 @@ exports.loginStudent = async (req, res) => {
       { expiresIn: '1d' }
     );
 
+    const user = { ...student };
+    delete user.password_hash;
+    
+    // Parse skills for the frontend
+    if (user.skills_json) {
+      try {
+        const parsed = typeof user.skills_json === 'string' ? JSON.parse(user.skills_json) : user.skills_json;
+        user.skillsOffered = parsed.offered || [];
+        user.skillsWanted = parsed.wanted || [];
+      } catch (e) {
+        user.skillsOffered = [];
+        user.skillsWanted = [];
+      }
+    } else {
+      user.skillsOffered = [];
+      user.skillsWanted = [];
+    }
+
     res.json({
       message: 'Login successful',
-      token
+      token,
+      student: user
     });
 
   } catch (error) {

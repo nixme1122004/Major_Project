@@ -10,15 +10,15 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange, onLogout, isAdmin }) => {
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'marketplace', label: 'Marketplace', icon: '🛒' },
-    { id: 'matchmaker', label: 'Matchmaker', icon: '✨' },
-    { id: 'messages', label: 'Messages', icon: '💬' },
-    { id: 'profile', label: 'Profile', icon: '👤' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+    { id: 'marketplace', label: 'Marketplace', icon: 'store' },
+    { id: 'matchmaker', label: 'Matchmaker', icon: 'auto_awesome' },
+    { id: 'messages', label: 'Messages', icon: 'forum' },
+    { id: 'profile', label: 'Profile', icon: 'person' },
   ];
 
   if (isAdmin) {
-    navItems.push({ id: 'admin', label: 'Admin', icon: '⚙️' });
+    navItems.push({ id: 'admin', label: 'Admin', icon: 'settings' });
   }
 
   return (
@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange, onLogout, i
                   : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <span className={`text-xl transition-transform group-hover:scale-110 ${activePage === item.id ? 'opacity-100' : 'opacity-70'}`}>
+              <span className={`material-symbols-rounded transition-transform group-hover:rotate-12 group-hover:scale-110 ${activePage === item.id ? 'opacity-100' : 'opacity-70'}`}>
                 {item.icon}
               </span>
               <span className="text-sm">{item.label}</span>
@@ -62,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange, onLogout, i
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all group"
           >
-            <span className="text-xl opacity-70 group-hover:opacity-100">🚪</span>
+            <span className="material-symbols-rounded opacity-70 group-hover:opacity-100 group-hover:rotate-12 transition-all">logout</span>
             <span className="text-sm font-medium">Logout</span>
           </button>
         </div>
@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onPageChange, onLogout, i
               activePage === item.id ? 'text-indigo-600 dark:text-indigo-400 scale-110' : 'text-slate-400 dark:text-slate-500'
             }`}
           >
-            <span className="text-xl">{item.icon}</span>
+            <span className="material-symbols-rounded">{item.icon}</span>
             <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label}</span>
           </button>
         ))}

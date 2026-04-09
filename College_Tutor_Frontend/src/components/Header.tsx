@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ user, theme, onToggleTheme, onNavigate 
           className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-xl"
           title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
         >
-          {theme === 'light' ? '🌙' : '☀️'}
+          <span className="material-symbols-rounded">{theme === 'light' ? 'dark_mode' : 'light_mode'}</span>
         </button>
 
         <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 px-4 py-1.5 rounded-full hidden sm:flex">
@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({ user, theme, onToggleTheme, onNavigate 
         
         <div className="flex items-center gap-5">
           <button className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-            <span className="text-xl">🔔</span>
+            <span className="material-symbols-rounded text-slate-400">notifications</span>
             <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
           </button>
           

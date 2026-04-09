@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { BACKEND_URL } from './config';
 import { User, AuthState } from './types';
 import { StorageService } from './services/storage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import CallOverlay from './components/CallOverlay';
+import { socketService } from './services/socket';
 
 // Pages
 import Marketplace from './pages/Marketplace';
@@ -30,6 +33,14 @@ const App: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'marketplace' | 'matchmaker' | 'messages' | 'profile' | 'admin' | 'video'>('dashboard');
   const [isCallActive, setIsCallActive] = useState(false);
+  const [callData, setCallData] = useState<{ 
+    receiverId: string | number; 
+    receiverName: string; 
+    receiverAvatar?: string;
+    mode: 'voice' | 'video';
+    isIncoming?: boolean;
+    incomingOffer?: any;
+  } | null>(null);
 
   useEffect(() => {
     localStorage.setItem('skillswap_auth', JSON.stringify(auth));
@@ -45,7 +56,47 @@ const App: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
-    const handleOpenCall = () => setIsCallActive(true);
+    if (auth.token) {
+      const socket = socketService.connect(auth.token);
+      
+      socket.on('incoming-call', (data) => {
+        console.log('🔔 Global Incoming call received:', data);
+        setCallData({
+          receiverId: data.from,
+          receiverName: data.name,
+          receiverAvatar: data.avatar,
+          incomingOffer: data.offer,
+          mode: data.mode,
+          isIncoming: true
+        });
+        setIsCallActive(true);
+      });
+
+      socket.on('new-request', (data) => {
+        console.log('📬 New Skill Swap Request:', data);
+        alert(`New Request: ${data.from_name} wants to swap skills with you! Check your Dashboard.`);
+      });
+
+      socket.on('stop-ringing', (data) => {
+        console.log('🔇 Stopping ring (handled elsewhere):', data);
+        setIsCallActive(false);
+        setCallData(null);
+      });
+
+      return () => {
+        socket.off('incoming-call');
+        socket.off('stop-ringing');
+      };
+    }
+  }, [auth.token]);
+
+  useEffect(() => {
+    const handleOpenCall = (e: any) => {
+      if (e.detail) {
+        setCallData(e.detail);
+      }
+      setIsCallActive(true);
+    };
     window.addEventListener('open-call', handleOpenCall);
     return () => window.removeEventListener('open-call', handleOpenCall);
   }, []);
@@ -56,10 +107,27 @@ const App: React.FC = () => {
     setIsCallActive(false);
   };
 
-  const refreshUser = () => {
-    if (auth.user) {
-      const updated = StorageService.getUserById(auth.user.id);
-      if (updated) setAuth(prev => ({ ...prev, user: updated }));
+
+  const refreshUser = async () => {
+    if (auth.token) {
+      try {
+        const { data } = await axios.get(`${BACKEND_URL}/api/student/profile`, {
+          headers: { Authorization: `Bearer ${auth.token}` }
+        });
+        const updatedUser: User = {
+          ...data,
+          id: data.student_id,
+          skillsOffered: data.skillsOffered || [],
+          skillsWanted: data.skillsWanted || [],
+          points: data.points || 100,
+          badges: auth.user?.badges || ['Pioneer'],
+          rating: data.rating || 5.0,
+          joinedDate: data.created_at || auth.user?.joinedDate
+        };
+        setAuth(prev => ({ ...prev, user: updatedUser }));
+      } catch (err) {
+        console.error('Refresh user failed:', err);
+      }
     }
   };
 
@@ -85,7 +153,16 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-      <CallOverlay isOpen={isCallActive} onClose={() => setIsCallActive(false)} />
+      <CallOverlay 
+        isOpen={isCallActive} 
+        onClose={() => setIsCallActive(false)} 
+        receiverId={callData?.receiverId}
+        receiverName={callData?.receiverName}
+        receiverAvatar={callData?.receiverAvatar}
+        mode={callData?.mode || 'video'}
+        isIncoming={callData?.isIncoming}
+        incomingOffer={callData?.incomingOffer}
+      />
       <Sidebar 
         activePage={currentPage} 
         onPageChange={setCurrentPage} 

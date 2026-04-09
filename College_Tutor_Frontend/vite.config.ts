@@ -13,11 +13,11 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
-
-      // ✅ ADD THIS
+      allowedHosts: ['localhost', '127.0.0.1', '192.168.0.149'],
+      cors: true,
       proxy: {
         "/api": {
-          target: "http://localhost:3000",
+          target: "http://localhost:5000",
           changeOrigin: true,
           secure: false,
         }

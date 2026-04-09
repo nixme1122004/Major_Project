@@ -1,4 +1,4 @@
-CREATE DATABASE SkillSwap
+CREATE DATABASE IF NOT EXISTS SkillSwap
     DEFAULT CHARACTER SET = 'utf8mb4';
 USE SkillSwap;
 
@@ -64,6 +64,8 @@ CREATE TABLE messages (
 CREATE TABLE video_call_sessions (
     call_id SERIAL PRIMARY KEY,
     room_id INT REFERENCES chat_rooms(room_id),
+    caller_id INT REFERENCES students(student_id),
+    receiver_id INT REFERENCES students(student_id),
     started_at TIMESTAMP,
     ended_at TIMESTAMP,
     status VARCHAR(20)

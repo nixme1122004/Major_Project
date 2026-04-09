@@ -3,8 +3,12 @@ const pool = require('../config/db'); // ✅ ONLY ONCE
 /* ===== START CALL (MANUAL ROOM) ===== */
 exports.startCall = async (req, res) => {
   try {
-    const { room_id, receiver_id } = req.body;
+    const { room_id, receiver_id: raw_receiver_id } = req.body;
     const caller_id = req.user.student_id;
+
+    const receiver_id = typeof raw_receiver_id === 'string' && raw_receiver_id.startsWith('u') 
+      ? parseInt(raw_receiver_id.substring(1)) 
+      : parseInt(raw_receiver_id);
 
     const [result] = await pool.query(
       `INSERT INTO video_call_sessions
@@ -30,7 +34,11 @@ exports.startCallAuto = async (req, res) => {
 
   try {
     const caller_id = req.user.student_id;
-    const { receiver_id } = req.body;
+    const { receiver_id: raw_receiver_id } = req.body;
+
+    const receiver_id = typeof raw_receiver_id === 'string' && raw_receiver_id.startsWith('u') 
+      ? parseInt(raw_receiver_id.substring(1)) 
+      : parseInt(raw_receiver_id);
 
     await connection.beginTransaction();
 

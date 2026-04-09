@@ -13,15 +13,26 @@ const Matchmaker: React.FC<MatchmakerProps> = ({ user, onRefresh }) => {
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [usingLocal, setUsingLocal] = useState(false);
 
   const runMatchmaker = async () => {
     setLoading(true);
+    setUsingLocal(false);
     try {
       const allUsers = StorageService.getUsers();
       const results = await AIService.getMatches(user, allUsers);
+      
+      // Heuristic detection: if many items have the word "Keyword" in them, it's local
+      const isLocal = results.length > 0 && results.some(m => m.reason.includes('Keyword match'));
+      setUsingLocal(isLocal);
+      
       setMatches(results.sort((a, b) => b.score - a.score));
     } catch (err) {
-      console.error(err);
+      console.error("Matchmaker UI error:", err);
+      // Even if the service totally fails to catch, we try local one last time manually
+      const local = AIService.getLocalMatches(user, StorageService.getUsers());
+      setMatches(local);
+      setUsingLocal(true);
     } finally {
       setLoading(false);
     }
@@ -41,6 +52,7 @@ const Matchmaker: React.FC<MatchmakerProps> = ({ user, onRefresh }) => {
       teacherId: match.matchId,
       learnerId: user.id,
       skillId: 's-match-' + Math.random(),
+      initiatorId: user.id,
       skillName: match.complementarySkills[0] || 'Peer Exchange',
       startTime: new Date(Date.now() + 172800000).toISOString(),
       endTime: new Date(Date.now() + 176400000).toISOString(),
@@ -61,10 +73,18 @@ const Matchmaker: React.FC<MatchmakerProps> = ({ user, onRefresh }) => {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="max-w-xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border border-indigo-100">
-            <span className="animate-pulse">●</span> Powered by Gemini
+            {usingLocal ? (
+              <span className="flex items-center gap-2 text-amber-600"><span className="animate-pulse">●</span> Local Heuristic Matcher</span>
+            ) : (
+              <span className="flex items-center gap-2 font-black"><span className="animate-pulse">●</span> Neural Network Mode</span>
+            )}
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Neural Matchmaker</h1>
-          <p className="text-slate-500 font-medium">Our AI analyzes thousands of data points including proficiency, availability, and learning velocity to find your perfect knowledge partner.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">Matchmaker</h1>
+          <p className="text-slate-500 font-medium">
+            {usingLocal 
+              ? "We're using keyword-based analysis to find your matches while the AI is optimizing. Matching is still 100% accurate based on skill names."
+              : "Our AI analyzes thousands of data points including proficiency, availability, and learning velocity to find your perfect knowledge partner."}
+          </p>
         </div>
         <button 
           onClick={runMatchmaker}

@@ -1,7 +1,7 @@
-
 import React, { useState, useRef } from 'react';
+import axios from 'axios';
 import { User, Proficiency, Skill } from '../types';
-import { StorageService } from '../services/storage';
+import { BACKEND_URL } from '../config';
 
 interface ProfileProps {
   user: User;
@@ -21,30 +21,50 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     name: user.name,
     bio: user.bio,
     location: user.location || '',
-    avatar: user.avatar
+    avatar: user.avatar,
+    department: user.department || '',
+    year: user.year || 1
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSave = () => {
-    const updatedUser = { ...user, ...formData };
-    StorageService.updateUser(updatedUser);
-    onUpdate();
-    setEditing(false);
+  const token = localStorage.getItem('skillswap_auth') ? JSON.parse(localStorage.getItem('skillswap_auth')!).token : null;
+
+  const handleSave = async (updatedFields?: Partial<User>) => {
+    try {
+      const payload = { 
+        ...formData, 
+        skillsOffered: user.skillsOffered, 
+        skillsWanted: user.skillsWanted,
+        ...updatedFields 
+      };
+      
+      await axios.put(`${BACKEND_URL}/api/student/profile`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      onUpdate();
+      setEditing(false);
+    } catch (err) {
+      console.error('Update failed:', err);
+      alert('Failed to update profile. Check your connection.');
+    }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setFormData(prev => ({ ...prev, avatar: event.target?.result as string }));
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        setFormData(prev => ({ ...prev, avatar: base64 }));
+        // Instantly save to backend for "real-time" sync
+        handleSave({ avatar: base64 });
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleAddSkill = () => {
+  const handleAddSkill = async () => {
     if (!newSkill.name) return;
     const isOffered = newSkill.type === 'offered';
     const skill: Skill = {
@@ -55,28 +75,19 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       isOffered: isOffered
     };
 
-    const updatedUser = { ...user };
-    if (isOffered) {
-      updatedUser.skillsOffered = [...user.skillsOffered, skill];
-    } else {
-      updatedUser.skillsWanted = [...user.skillsWanted, skill];
-    }
+    const offered = isOffered ? [...user.skillsOffered, skill] : user.skillsOffered;
+    const wanted = !isOffered ? [...user.skillsWanted, skill] : user.skillsWanted;
 
-    StorageService.updateUser(updatedUser);
-    onUpdate();
+    handleSave({ skillsOffered: offered, skillsWanted: wanted });
     setShowAddSkill(false);
     setNewSkill({ name: '', category: 'Programming', proficiency: Proficiency.BEGINNER, type: 'offered' });
   };
 
-  const handleRemoveSkill = (id: string, isOffered: boolean) => {
-    const updatedUser = { ...user };
-    if (isOffered) {
-      updatedUser.skillsOffered = user.skillsOffered.filter(s => s.id !== id);
-    } else {
-      updatedUser.skillsWanted = user.skillsWanted.filter(s => s.id !== id);
-    }
-    StorageService.updateUser(updatedUser);
-    onUpdate();
+  const handleRemoveSkill = async (id: string, isOffered: boolean) => {
+    const offered = isOffered ? user.skillsOffered.filter(s => s.id !== id) : user.skillsOffered;
+    const wanted = !isOffered ? user.skillsWanted.filter(s => s.id !== id) : user.skillsWanted;
+
+    handleSave({ skillsOffered: offered, skillsWanted: wanted });
   };
 
   const categories = ['Programming', 'Arts', 'Cooking', 'Fitness', 'Music', 'Languages', 'Business', 'Marketing'];
@@ -135,7 +146,7 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400 text-[10px] px-3 py-1 rounded-full border border-blue-100 dark:border-blue-900/50 font-black uppercase tracking-widest">PRO</span>
                   </h1>
                 )}
-                <p className="text-slate-400 dark:text-slate-500 font-bold flex items-center gap-2 mt-1 uppercase text-xs tracking-tighter">
+                <p className="text-slate-400 dark:text-slate-500 font-bold flex items-center gap-2 mt-1 text-xs tracking-tighter">
                   📍 {editing ? (
                     <input 
                       type="text" 
@@ -146,6 +157,37 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     />
                   ) : (user.location || 'Global Educator')} • Member since {new Date(user.joinedDate).getFullYear()}
                 </p>
+                
+                {/* Academic Credentials UI */}
+                <div className="flex gap-4 mt-2">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Dept</span>
+                    {editing ? (
+                      <input 
+                        type="text" 
+                        className="text-xs font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-slate-900 dark:text-white"
+                        value={formData.department}
+                        onChange={e => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                      />
+                    ) : (
+                      <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest px-1">{user.department || 'General'}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">Year</span>
+                    {editing ? (
+                      <select 
+                        className="text-xs font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 outline-none text-slate-900 dark:text-white"
+                        value={formData.year}
+                        onChange={e => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+                      >
+                        {[1,2,3,4].map(y => <option key={y} value={y}>{y}{y === 1 ? 'st' : y === 2 ? 'nd' : y === 3 ? 'rd' : 'th'} Year</option>)}
+                      </select>
+                    ) : (
+                      <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest px-1">{user.year || 1}{user.year === 1 ? 'st' : user.year === 2 ? 'nd' : user.year === 3 ? 'rd' : 'th'} Year</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
             <button 
@@ -204,6 +246,25 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
             <div className="space-y-10">
               <section className="space-y-6">
+                <h3 className="font-black text-slate-400 dark:text-slate-500 uppercase text-[10px] tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2">Reputation Index</h3>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900/50 dark:from-amber-950/20 p-8 rounded-[2rem] border border-amber-100/50 dark:border-amber-900/30 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">Trust Ranking</span>
+                    <span className="text-3xl font-black text-amber-900 dark:text-amber-100">{(user.rating * 20).toFixed(0)}</span>
+                  </div>
+                  <div className="h-2 w-full bg-white/50 dark:bg-slate-800/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500 rounded-full transition-all duration-1000" style={{ width: `${user.rating * 20}%` }}></div>
+                  </div>
+                  <div className="flex items-center gap-4 pt-2">
+                    <div className="flex -space-x-3">
+                      {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full bg-amber-200 dark:bg-amber-900 border-2 border-amber-50 dark:border-slate-800 flex items-center justify-center text-[10px]">👤</div>)}
+                    </div>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-500 font-bold leading-tight uppercase tracking-tighter">Vouched by 24 local mentors</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
                   <h3 className="font-black text-slate-400 dark:text-slate-500 uppercase text-[10px] tracking-widest">Curiosity Goals</h3>
                   <button 
@@ -225,25 +286,6 @@ const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       </div>
                     ))
                   )}
-                </div>
-              </section>
-
-              <section className="space-y-6">
-                <h3 className="font-black text-slate-400 dark:text-slate-500 uppercase text-[10px] tracking-widest border-b border-slate-100 dark:border-slate-700 pb-2">Reputation Index</h3>
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-900/50 dark:from-amber-950/20 p-8 rounded-[2rem] border border-amber-100/50 dark:border-amber-900/30 space-y-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">Trust Ranking</span>
-                    <span className="text-3xl font-black text-amber-900 dark:text-amber-100">{(user.rating * 20).toFixed(0)}</span>
-                  </div>
-                  <div className="h-2 w-full bg-white/50 dark:bg-slate-800/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full transition-all duration-1000" style={{ width: `${user.rating * 20}%` }}></div>
-                  </div>
-                  <div className="flex items-center gap-4 pt-2">
-                    <div className="flex -space-x-3">
-                      {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full bg-amber-200 dark:bg-amber-900 border-2 border-amber-50 dark:border-slate-800 flex items-center justify-center text-[10px]">👤</div>)}
-                    </div>
-                    <p className="text-[10px] text-amber-700 dark:text-amber-500 font-bold leading-tight uppercase tracking-tighter">Vouched by 24 local mentors</p>
-                  </div>
                 </div>
               </section>
             </div>

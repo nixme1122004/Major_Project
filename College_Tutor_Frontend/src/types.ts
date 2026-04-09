@@ -30,6 +30,8 @@ export interface User {
   role: 'user' | 'admin';
   availability: string[]; // ['Mon 10:00-12:00', ...]
   location?: string;
+  department?: string;
+  year?: number;
   joinedDate: string;
 }
 
@@ -56,16 +58,30 @@ export interface Message {
 }
 
 export interface Booking {
-  id: string;
-  teacherId: string;
-  learnerId: string;
-  skillId: string;
-  skillName: string;
-  startTime: string;
-  endTime: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  id?: string;
+  booking_id?: string | number; // Backend field
+  teacherId?: string;
+  teacher_id?: string | number; // Backend field
+  learnerId?: string;
+  learner_id?: string | number; // Backend field
+  skillId?: string;
+  skill_id?: string; // Backend field
+  initiatorId?: string; 
+  initiator_id?: string | number; // Backend field
+  skillName?: string;
+  skill_name?: string; // Backend field
+  startTime?: string;
+  start_time?: string; // Backend field
+  endTime?: string;
+  end_time?: string; // Backend field
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled' | 'confirmed';
   notes?: string;
   milestones: Milestone[];
+  // Helper fields from DB join
+  teacher_name?: string;
+  teacher_avatar?: string;
+  learner_name?: string;
+  learner_avatar?: string;
 }
 
 export interface Milestone {

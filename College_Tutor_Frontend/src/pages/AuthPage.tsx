@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { User } from '../types';
+import { BACKEND_URL } from '../config';
 
 interface AuthPageProps {
   onAuthSuccess: (user: User, token: string) => void;
 }
 
-const BACKEND_URL = (import.meta as any).env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
   const [email, setEmail] = useState('sarah@college.ac.in');
@@ -24,15 +24,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
       if (mode === 'login') {
         const { data } = await axios.post(`${BACKEND_URL}/api/auth/login`, { email, password });
         
-        // Mock User Hydration since the database presently only stores minimal data
         const loggedUser: User = {
-          id: String(data.student_id || Math.random()),
-          name: email.split('@')[0], 
-          email: email,
-          bio: 'Connected via Live Database',
-          avatar: `https://api.dicebear.com/7.x/notionists/svg?seed=${email}`,
-          skillsOffered: [],
-          skillsWanted: [],
+          ...data.student,
+          id: data.student.student_id, // Map database field to frontend field
+          skillsOffered: data.student.skillsOffered || [], 
+          skillsWanted: data.student.skillsWanted || [],
           points: 100,
           badges: ['Pioneer'],
           rating: 5.0,
@@ -40,7 +36,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
           isVerified: true,
           role: 'user',
           availability: [],
-          joinedDate: new Date().toISOString()
+          joinedDate: data.student.created_at || new Date().toISOString()
         };
 
         onAuthSuccess(loggedUser, data.token);
