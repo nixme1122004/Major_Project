@@ -14,6 +14,10 @@ const connectionConfig = databaseUrl
       queueLimit: 0,
     };
 
+if (!databaseUrl && !(process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME)) {
+  console.warn('⚠️ No database connection settings detected. Set DATABASE_URL or DB_HOST/DB_USER/DB_PASSWORD/DB_NAME.');
+}
+
 const pool = mysql.createPool(connectionConfig);
 
 // Test connection
@@ -23,7 +27,7 @@ const pool = mysql.createPool(connectionConfig);
     console.log('✅ MySQL connected');
     connection.release();
   } catch (err) {
-    console.error('❌ MySQL connection failed:', err.message);
+    console.error('❌ MySQL connection failed:', err);
   }
 })();
 
