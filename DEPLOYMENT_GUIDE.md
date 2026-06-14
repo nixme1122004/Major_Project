@@ -211,13 +211,24 @@ Render uses managed services for production.
 1. Go to https://render.com and connect your GitHub account.
 2. Create a new service and choose "Web Service" for the backend.
 3. Use `main` branch and set the build command to `cd College_Tutor_Backend && npm install`, start command to `cd College_Tutor_Backend && npm start`.
-4. Create a new "Static Site" service for the frontend.
-5. Use `main` branch and set build command to `cd College_Tutor_Frontend && npm install && npm run build`, publish directory `College_Tutor_Frontend/dist`.
-6. Create a managed MySQL database in Render and connect it to the backend service.
-7. Add environment variables in Render for backend:
+4. Create a managed MySQL database in Render and connect it to the backend service.
+5. Add environment variables in Render for backend:
    - `JWT_SECRET`
-   - `FRONTEND_URL` with the frontend URL
    - `DATABASE_URL` from the managed MySQL database
+
+### Deploying frontend to GitHub Pages
+
+1. Ensure `College_Tutor_Frontend/.github/workflows/deploy-gh-pages.yml` exists in the repo.
+2. Push to `main` and GitHub Actions will build the frontend and publish `College_Tutor_Frontend/dist` to `gh-pages`.
+3. In GitHub repo settings, go to **Pages** and configure the site to use branch `gh-pages` and folder `/`.
+4. Set the frontend backend URL secret in GitHub repo settings if needed:
+   - `VITE_BACKEND_URL` = `https://your-backend-url.onrender.com`
+
+### Notes
+
+- `VITE_BASE` is set in `vite.config.ts` for GitHub Pages under the repository path.
+- The backend on Render still serves API and WebSocket traffic.
+- The frontend is static and loads from GitHub Pages.
    - Set `VITE_BACKEND_URL` for the frontend to the backend URL
 
 ---

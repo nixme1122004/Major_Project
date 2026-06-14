@@ -8,13 +8,13 @@ const __dirname = path.dirname(__filename)
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const base = env.VITE_BASE || '/Skill_Swap_For_Student_Learning/'
 
   return {
+    base,
     server: {
       port: 3000,
       host: '0.0.0.0',
-
-      // ✅ ADD THIS
       proxy: {
         "/api": {
           target: "http://localhost:3000",
