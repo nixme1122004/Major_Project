@@ -195,6 +195,33 @@ Before each push, verify:
 
 ---
 
+## Render Deployment Notes
+
+Render uses managed services for production.
+
+- `render.yaml` is included in the repo and defines:
+  - A Node.js web service for the backend
+  - A static site service for the frontend
+  - A managed MySQL database
+- The backend now supports `DATABASE_URL`, which Render provides for managed MySQL.
+- The frontend uses `VITE_BACKEND_URL`, which you can set in Render environment variables.
+
+### Deploying on Render
+
+1. Go to https://render.com and connect your GitHub account.
+2. Create a new service and choose "Web Service" for the backend.
+3. Use `main` branch and set the build command to `cd College_Tutor_Backend && npm install`, start command to `cd College_Tutor_Backend && npm start`.
+4. Create a new "Static Site" service for the frontend.
+5. Use `main` branch and set build command to `cd College_Tutor_Frontend && npm install && npm run build`, publish directory `College_Tutor_Frontend/dist`.
+6. Create a managed MySQL database in Render and connect it to the backend service.
+7. Add environment variables in Render for backend:
+   - `JWT_SECRET`
+   - `FRONTEND_URL` with the frontend URL
+   - `DATABASE_URL` from the managed MySQL database
+   - Set `VITE_BACKEND_URL` for the frontend to the backend URL
+
+---
+
 ## Files NOT to Commit
 
 These are already in `.gitignore`:

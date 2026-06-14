@@ -1,0 +1,35 @@
+services:
+  - type: web_service
+    name: skill-swap-backend
+    env: node
+    branch: main
+    region: oregon
+    buildCommand: cd College_Tutor_Backend && npm install
+    startCommand: cd College_Tutor_Backend && npm start
+    autoDeploy: true
+    envVars:
+      - key: JWT_SECRET
+        value: change_this_secret
+      - key: FRONTEND_URL
+        value: https://skill-swap-frontend.onrender.com
+      - key: DATABASE_URL
+        fromDatabase: skill-swap-mysql
+
+  - type: static_site
+    name: skill-swap-frontend
+    env: static
+    branch: main
+    region: oregon
+    buildCommand: cd College_Tutor_Frontend && npm install && npm run build
+    publishPath: College_Tutor_Frontend/dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: https://skill-swap-backend.onrender.com
+
+databases:
+  - name: skill-swap-mysql
+    engine: mysql
+    version: "8"
+    plan: starter
+    region: oregon
+    databaseName: skillswap
